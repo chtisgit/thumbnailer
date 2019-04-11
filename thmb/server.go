@@ -26,11 +26,18 @@ type Server struct {
 }
 
 func defaultHandler(r *Request, res *Response) error {
-	sz := fmt.Sprintf("%dx%d!", r.Width, r.Height)
 	out := r.path + ".jpg"
 
-	log.Println("Run: convert ", r.path, " -resize ", sz, " ", out)
-	cmd := exec.Command("convert", r.path, "-resize", sz, out)
+	var cmd *exec.Cmd
+
+	if r.Width != 0 || r.Height != 0 {
+		sz := fmt.Sprintf("%dx%d!", r.Width, r.Height)
+		cmd = exec.Command("convert", r.path, "-resize", sz, out)
+	} else {
+		// don't resize, just convert to jpg
+		cmd = exec.Command("convert", r.path, out)
+	}
+
 	tr := time.AfterFunc(4*time.Second, func() {
 		log.Println("error: aborted conversion (timeout)")
 		cmd.Process.Kill()
