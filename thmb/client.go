@@ -42,14 +42,14 @@ func (t *Thmb) Close() {
 }
 
 // ResizeReader resizes an image read from an io.Reader. The size in bytes must be supplied.
-func (t *Thmb) ResizeReader(r io.Reader, size, width, height uint32) ([]byte, error) {
+func (t *Thmb) ResizeReader(r io.Reader, w io.Writer, size, width, height uint32) error {
 	if size > math.MaxUint32 {
 		panic("image file size too large")
 	}
 
 	err := t.reinit()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	req := &Request{
@@ -61,37 +61,38 @@ func (t *Thmb) ResizeReader(r io.Reader, size, width, height uint32) ([]byte, er
 	if err := req.Send(t.conn, r); err != nil {
 		t.conn.Close()
 		t.conn = nil
-		return nil, err
+		return err
 	}
 
-	res, err := ReceiveResponse(t.conn, t.MaxSize)
+	_, err = ReceiveResponse(t.conn, w, t.MaxSize)
 	if err != nil {
 		t.conn.Close()
 		t.conn = nil
-		return nil, err
 	}
 
-	return res.Data, err
+	return err
 
 }
 
 // Resize resizes an image read from byte slice.
 func (t *Thmb) Resize(img []byte, width, height uint32) ([]byte, error) {
-	return t.ResizeReader(bytes.NewReader(img), uint32(len(img)), width, height)
+	buf := bytes.NewBuffer(nil)
+	err := t.ResizeReader(bytes.NewReader(img), buf, uint32(len(img)), width, height)
+	return buf.Next(int(t.MaxSize)), err
 }
 
 // ResizeFile resizes an image read from a file.
-func (t *Thmb) ResizeFile(path string, width, height uint32) ([]byte, error) {
+func (t *Thmb) ResizeFile(path string, w io.Writer, width, height uint32) error {
 	st, err := os.Stat(path)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer f.Close()
 
-	return t.ResizeReader(f, uint32(st.Size()), width, height)
+	return t.ResizeReader(f, w, uint32(st.Size()), width, height)
 }

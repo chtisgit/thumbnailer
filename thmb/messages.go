@@ -85,25 +85,25 @@ func ReceiveRequest(r io.Reader, c *Config) (*Request, error) {
 
 // ReceiveResponse receives the Server's response. A maxSize parameter must be supplied.
 // If the image in the response is larger than maxSize bytes, an error is returned.
-func ReceiveResponse(r io.Reader, maxSize uint32) (*Response, error) {
+func ReceiveResponse(r io.Reader, w io.Writer, maxSize uint32) (id uint64, err error) {
 	var buf [12]byte
-	if _, err := r.Read(buf[:]); err != nil {
-		return nil, err
+	if _, err = r.Read(buf[:]); err != nil {
+		return
 	}
 
-	var sz uint32
-	res := new(Response)
-	res.ID = binary.BigEndian.Uint64(buf[:])
-	sz = binary.BigEndian.Uint32(buf[8:])
+	id = binary.BigEndian.Uint64(buf[:])
+	sz := int64(binary.BigEndian.Uint32(buf[8:]))
 
-	if sz > maxSize {
-		return nil, fmt.Errorf("request payload too large (%d bytes)", sz)
+	if sz > int64(maxSize) {
+		return 0, fmt.Errorf("request payload too large (%d bytes)", sz)
 	}
 
-	res.Data = make([]byte, int(sz))
+	wr, _ := io.CopyN(w, r, sz)
+	if wr != int64(sz) {
+		return 0, fmt.Errorf("too short")
+	}
 
-	_, err := r.Read(res.Data)
-	return res, err
+	return
 }
 
 // Send sends the response to the io.Writer.

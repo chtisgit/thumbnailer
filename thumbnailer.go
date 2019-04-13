@@ -33,12 +33,6 @@ func client(addr, image string, width, height int) {
 	t := thmb.NewThmb("unix", addr)
 	defer t.Close()
 
-	b, err := t.ResizeFile(image, uint32(width), uint32(height))
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
 	f, err := os.Create("thumbnail.jpg")
 	if err != nil {
 		log.Println(err)
@@ -46,7 +40,11 @@ func client(addr, image string, width, height int) {
 	}
 	defer f.Close()
 
-	f.Write(b)
+	err = t.ResizeFile(image, f, uint32(width), uint32(height))
+	if err != nil {
+		log.Println(err)
+		return
+	}
 }
 
 func main() {
