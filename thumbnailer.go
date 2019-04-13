@@ -9,7 +9,7 @@ import (
 	"github.com/chtisgit/thumbnailer/thmb"
 )
 
-func serve(configFile string) {
+func serve(configFile string, chmod bool) {
 	var cfg thmb.Config
 	_, err := toml.DecodeFile(configFile, &cfg)
 	if err != nil {
@@ -22,6 +22,10 @@ func serve(configFile string) {
 	if err != nil {
 		log.Print(err)
 		return
+	}
+
+	if chmod {
+		os.Chmod(cfg.Addr, 0777)
 	}
 
 	log.Println("Ready.")
@@ -51,15 +55,17 @@ func main() {
 	var server, image string
 	var width, height int
 	var configFile string
+	var chmod bool
 	flag.StringVar(&configFile, "c", "/etc/thumbnailer.toml", "config file path")
 	flag.StringVar(&server, "s", "", "server socket (setting this variable will activate client mode)")
 	flag.StringVar(&image, "image", "", "path to image")
 	flag.IntVar(&width, "w", 150, "width of the thumbnail")
 	flag.IntVar(&height, "h", 150, "height of the thumbnail")
+	flag.BoolVar(&chmod, "unsafe-perm", false, "chmod socket after creation to 777")
 	flag.Parse()
 
 	if server == "" && image == "" {
-		serve(configFile)
+		serve(configFile, chmod)
 	}
 
 	if server != "" && image != "" {
