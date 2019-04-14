@@ -29,7 +29,6 @@ func NewThmb(network, addr string) *Thmb {
 func (t *Thmb) reinit() (err error) {
 	if t.conn == nil {
 		t.conn, err = net.Dial(t.nw, t.addr)
-		return
 	}
 	return
 }

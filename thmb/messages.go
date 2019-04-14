@@ -8,6 +8,8 @@ import (
 	"net"
 	"os"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 // Request is sent by the client to the server, to request a thumbnail.
@@ -44,6 +46,7 @@ func (r *Request) Send(w io.Writer, src io.Reader) error {
 	}
 
 	_, err := io.CopyN(w, src, int64(r.Size))
+	logrus.WithError(err).Info("Send")
 	return err
 }
 

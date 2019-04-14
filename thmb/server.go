@@ -38,15 +38,15 @@ func defaultHandler(r *Request, res *Response) error {
 		cmd = exec.Command("convert", r.path, out)
 	}
 
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+
 	tr := time.AfterFunc(4*time.Second, func() {
 		log.Println("error: aborted conversion (timeout)")
 		cmd.Process.Kill()
 	})
 	defer tr.Stop()
-
-	if err := cmd.Start(); err != nil {
-		return err
-	}
 
 	err := cmd.Wait()
 	if err != nil {
@@ -79,6 +79,7 @@ func (s *Server) worker(N int) {
 		os.Remove(req.path)
 
 		if err != nil {
+			log.Println("closing connection. Error in handler: ", err)
 			req.from.Close()
 			continue
 		}
@@ -112,7 +113,8 @@ func (s *Server) Serve(customHndlr HandleFunc) error {
 
 		req, err := ReceiveRequest(conn, &s.c)
 		if err != nil {
-			log.Println("ReceiveRequest: ", err)
+			log.Println("error in request: ", err)
+			conn.Close()
 			continue
 		}
 		req.from = conn
